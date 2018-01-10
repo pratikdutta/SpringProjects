@@ -1,7 +1,9 @@
 package com.pratik.stockservice.resource;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -13,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+
 import yahoofinance.Stock;
 import yahoofinance.YahooFinance;
+
 
 @RestController
 @RequestMapping("/stock")
@@ -27,14 +31,18 @@ public class StockResource {
 	YahooFinance yahooFinance;
 
 	@GetMapping("/{username}")
-	public List<Stock> getStock(@PathVariable("username") final String userName){
+	public List<Quote> getStock(@PathVariable("username") final String userName){
 		
 //		List<String> quotes = restTemplate.getForObject("http://localhost:8300/rest/db/"+userName, List.class);
-		ResponseEntity<List<String>> quoteResponse = restTemplate.exchange("http://localhost:8300/rest/db/"+userName, HttpMethod.GET,
+		ResponseEntity<List<String>> quoteResponse = restTemplate.exchange("http://db-service/rest/db/"+userName, HttpMethod.GET,
 				null, new ParameterizedTypeReference<List<String>>() {});
 		List<String> quotes = quoteResponse.getBody();
-		return quotes.stream()
-		.map(this::getStockPrice)
+		return quotes
+				.stream()
+				.map(quote -> {
+					Stock stock = getStockPrice(quote);
+					return new Quote(quote, stock.getQuote().getPrice());
+		})
 		.collect(Collectors.toList());
 	}
 
@@ -47,5 +55,33 @@ public class StockResource {
 			e.printStackTrace();
 		}
 		return stock;
+	}
+	
+	private static class Quote {
+		private String quote;
+		BigDecimal price;
+
+		public String getQuote() {
+			return quote;
+		}
+
+		public void setQuote(String quote) {
+			this.quote = quote;
+		}
+
+		public Quote(String quote, BigDecimal price) {
+			super();
+			this.quote = quote;
+			this.price = price;
+		}
+
+		public BigDecimal getPrice() {
+			return price;
+		}
+
+		public void setPrice(BigDecimal price) {
+			this.price = price;
+		}
+
 	}
 }
